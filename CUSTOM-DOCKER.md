@@ -19,32 +19,27 @@ git checkout custom-docker
 # 2. Set your Google Cloud project
 gcloud config set project apps-n8n
 
-# 3. Build n8n locally first
-pnpm install --frozen-lockfile
-pnpm build > build.log 2>&1
+# 3. Perform cloud build
+gcloud builds submit --config=cloudbuild.yaml
 
-# 4. Build the Docker image and push to Google Container Registry
-# Build the application
-node scripts/build-n8n.mjs
+# 4. Deploy to Cloud Run
+gcloud run deploy n8n
+    --image=gcr.io/apps-n8n/n8n-custom:latest
+    --command="/bin/sh"
+    --args="-c,sleep 5;n8n start"
+    --region=$REGION
+    --allow-unauthenticated
+    --port=5678
+    --memory=2Gi
+    --cpu 2
+    --min-instances 1
+    --max-instances 5
+    --no-cpu-throttling
+    --set-env-vars="NODE_ENV=production,N8N_PORT=5678,N8N_PROTOCOL=https,N8N_HOST=$(echo $SERVICE_URL | sed 's/https:\/\///'),WEBHOOK_URL=$SERVICE_URL,N8N_EDITOR_BASE_URL=$SERVICE_URL,DB_TYPE=postgresdb,DB_POSTGRESDB_DATABASE=n8n,DB_POSTGRESDB_USER=n8n-user,DB_POSTGRESDB_HOST=/cloudsql/$PROJECT_ID:$REGION:n8n-db,DB_POSTGRESDB_PORT=5432,DB_POSTGRESDB_SCHEMA=public,GENERIC_TIMEZONE=UTC,QUEUE_HEALTH_CHECK_ACTIVE=true"
+    --set-secrets="DB_POSTGRESDB_PASSWORD=n8n-db-password:latest,N8N_ENCRYPTION_KEY=n8n-encryption-key:latest"
+    --add-cloudsql-instances=$PROJECT_ID:$REGION:n8n-db
+    --service-account=n8n-service-account@$PROJECT_ID.iam.gserviceaccount.com
 
-# Build and tag the Docker image
-docker build -f docker/images/n8n/Dockerfile -t gcr.io/YOUR_PROJECT_ID/n8n-custom:latest .
-
-# Push to GCR
-docker push gcr.io/YOUR_PROJECT_ID/n8n-custom:latest
-
-# 5. Deploy to Cloud Run
-gcloud run deploy n8n \
-  --image gcr.io/YOUR_PROJECT_ID/n8n-custom:latest \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --port 5678 \
-  --memory 2Gi \
-  --cpu 2 \
-  --min-instances 1 \
-  --max-instances 10 \
-  --set-env-vars "NODE_ENV=production,N8N_HOST=0.0.0.0,N8N_PORT=5678"
 ```
 
 Here are some commands we've used so far in the deployment:
@@ -54,7 +49,27 @@ export PROJECT_ID=apps-n8n
 export REGION=us-east1
 export SERVICE_URL="https://n8n-325859163001.us-east1.run.app/"
 
-gcloud run services update n8n     --region=$REGION     --update-env-vars="N8N_HOST=$(echo $SERVICE_URL | sed 's/https:\/\///'),WEBHOOK_URL=$SERVICE_URL,N8N_EDITOR_BASE_URL=$SERVICE_URL"
+# Updating
+gcloud run services update n8n
+    --region=$REGION
+    --update-env-vars="N8N_HOST=$(echo $SERVICE_URL | sed 's/https:\/\///'),WEBHOOK_URL=$SERVICE_URL,N8N_EDITOR_BASE_URL=$SERVICE_URL"
 
+# Creating
+gcloud run deploy n8n
+    --image=n8nio/n8n:latest
+    --command="/bin/sh"
+    --args="-c,sleep 5;n8n start"
+    --region=$REGION
+    --allow-unauthenticated
+    --port=5678
+    --memory=2Gi
+    --cpu 2
+    --min-instances 1
+    --max-instances 5
+    --no-cpu-throttling
+    --set-env-vars="N8N_PORT=5678,N8N_PROTOCOL=https,N8N_HOST=$(echo $SERVICE_URL | sed 's/https:\/\///'),WEBHOOK_URL=$SERVICE_URL,N8N_EDITOR_BASE_URL=$SERVICE_URL,DB_TYPE=postgresdb,DB_POSTGRESDB_DATABASE=n8n,DB_POSTGRESDB_USER=n8n-user,DB_POSTGRESDB_HOST=/cloudsql/$PROJECT_ID:$REGION:n8n-db,DB_POSTGRESDB_PORT=5432,DB_POSTGRESDB_SCHEMA=public,GENERIC_TIMEZONE=UTC,QUEUE_HEALTH_CHECK_ACTIVE=true"
+    --set-secrets="DB_POSTGRESDB_PASSWORD=n8n-db-password:latest,N8N_ENCRYPTION_KEY=n8n-encryption-key:latest"
+    --add-cloudsql-instances=$PROJECT_ID:$REGION:n8n-db
+    --service-account=n8n-service-account@$PROJECT_ID.iam.gserviceaccount.com
 
 ```
