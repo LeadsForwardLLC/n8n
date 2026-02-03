@@ -23,7 +23,8 @@ RUN apk add --no-cache busybox-binsh && \
         tini \
         tzdata \
         ca-certificates \
-        libc6-compat && \
+        libc6-compat
+        perl && \
     # Install full-icu
     npm install -g full-icu@1.5.0 && \
     # Update npm bundled deps: diff@8.0.3, tar@7.5.4
