@@ -16,6 +16,9 @@ git clone https://github.com/LeadsForwardLLC/n8n.git
 cd n8n
 git checkout custom-docker
 
+## If already checked out
+git pull origin custom-docker
+
 # 2. Set your Google Cloud project
 gcloud config set project apps-n8n
 
