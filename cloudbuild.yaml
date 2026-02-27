@@ -8,10 +8,10 @@ steps:
         export NODE_OPTIONS="--max-old-space-size=4096"
         corepack enable pnpm
         pnpm install --frozen-lockfile
-        pnpm build
+        pnpm build > build.log 2>&1
         node scripts/build-n8n.mjs
 
-  # Build Docker image
+  # Build Docker image with reduced context
   - name: "gcr.io/cloud-builders/docker"
     args:
       - "build"
@@ -19,6 +19,7 @@ steps:
       - "docker/images/n8n/Dockerfile"
       - "-t"
       - "gcr.io/$PROJECT_ID/n8n-custom:latest"
+      - "--no-cache"
       - "."
 
 images:
